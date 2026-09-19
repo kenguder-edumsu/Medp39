@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทำเนียบรุ่น กศ.ม. การบริหารและพัฒนาการศึกษา พ.39 มมส</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        msu: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            500: '#f97316', // แสด
+                            600: '#ea580c',
+                            700: '#c2410c',
+                            yellow: '#eab308', // เหลือง
+                            dark: '#1e293b' // เทาเข้ม
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Prompt', sans-serif; }
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="h-full bg-slate-100 text-slate-800 antialiased" x-data="appData()" x-init="initApp()">
+
+    <!-- MAIN ACCESS LOCK SCREEN (PASSWORD REQUIRED: 998877) -->
+    <div x-show="!isLoggedIn" class="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4" x-cloak>
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 space-y-6 border border-slate-100 text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-msu-yellow to-msu-500"></div>
+            
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-msu-yellow to-msu-500 text-white flex items-center justify-center text-2xl shadow-lg mx-auto mb-2">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            
+            <div>
+                <h2 class="text-xl font-bold text-slate-900">ทำเนียบรุ่น กศ.ม. พ.39 มมส</h2>
+                <p class="text-xs text-slate-500 mt-1">การบริหารและพัฒนาการศึกษา คณะศึกษาศาสตร์ มมส</p>
+            </div>
+
+            <form @submit.prevent="handleLogin" class="space-y-4 text-left">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">กรุณากรอกรหัสผ่านเพื่อเข้าใช้งานระบบ</label>
+                    <input type="password" x-model="loginPasswordInput" placeholder="รหัสผ่าน..." required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm text-center tracking-widest font-semibold">
+                </div>
+
+                <div x-show="loginError" class="p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span x-text="loginError"></span>
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-gradient-to-r from-msu-yellow to-msu-500 hover:from-yellow-500 hover:to-orange-600 text-white font-semibold text-sm rounded-xl shadow-lg transition">
+                    เข้าสู่ระบบ
+                </button>
+            </form>
+
+            <div class="pt-2 border-t border-slate-100 text-[11px] text-slate-400">
+                ระบบรักษาความปลอดภัยเครือข่ายนิสิต กศ.ม. พ.39
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN AUTHENTICATION MODAL (PASSWORD REQUIRED: Med692026) -->
+    <div x-show="showAuthModal" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6 border border-slate-100" @click.outside="showAuthModal = false">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-500 to-msu-500 text-white flex items-center justify-center text-lg shadow">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">เข้าสู่ระบบผู้ดูแลระบบ (Admin)</h3>
+                        <p class="text-xs text-slate-500">สำหรับเพิ่ม, แก้ไข หรือลบข้อมูลนิสิตและอาจารย์</p>
+                    </div>
+                </div>
+                <button @click="showAuthModal = false" class="p-2 text-slate-400 hover:text-slate-600 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form @submit.prevent="handleAdminLogin" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">รหัสผ่านผู้ดูแลระบบ (Admin Password)</label>
+                    <input type="password" x-model="adminPasswordInput" placeholder="กรอกรหัสผ่าน Admin..." required
+                        class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm text-center tracking-widest font-semibold">
+                </div>
+
+                <div x-show="adminLoginError" class="p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl flex items-center gap-2">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span x-text="adminLoginError"></span>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" @click="showAuthModal = false" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-red-500 to-msu-500 hover:from-red-600 hover:to-orange-600 text-white text-sm font-semibold rounded-xl shadow transition">
+                        ยืนยันเข้าสู่ระบบ Admin
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP LAYOUT (UNLOCKED) -->
+    <div class="min-h-full flex flex-col" x-show="isLoggedIn">
+        <!-- Top Navigation -->
+        <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center space-x-3 cursor-pointer" @click="currentTab = 'dashboard'">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-msu-yellow to-msu-500 flex items-center justify-center text-white shadow">
+                        <i class="fa-solid fa-graduation-cap text-lg"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-base sm:text-lg block leading-tight">กศ.ม. พ.39 มมส</span>
+                        <span class="text-xs text-slate-400 hidden sm:block">การบริหารและพัฒนาการศึกษา</span>
+                    </div>
+                </div>
+
+                <!-- Desktop Nav Tabs -->
+                <nav class="hidden md:flex space-x-1">
+                    <button @click="currentTab = 'dashboard'" :class="currentTab === 'dashboard' ? 'bg-msu-500 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'" class="px-3 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie"></i> หน้าแรก
+                    </button>
+                    <button @click="currentTab = 'directory'" :class="currentTab === 'directory' ? 'bg-msu-500 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'" class="px-3 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2">
+                        <i class="fa-solid fa-address-book"></i> ทำเนียบรุ่นนิสิต (<span x-text="students.length"></span>)
+                    </button>
+                    <button @click="currentTab = 'advisors'" :class="currentTab === 'advisors' ? 'bg-msu-500 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'" class="px-3 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2">
+                        <i class="fa-solid fa-chalkboard-user"></i> อาจารย์ที่ปรึกษาประจำห้อง (<span x-text="advisors.length"></span>)
+                    </button>
+                    <button @click="handleSettingsTabClick" :class="currentTab === 'settings' ? 'bg-msu-500 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'" class="px-3 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2">
+                        <i class="fa-solid fa-gear"></i> จัดการข้อมูล 
+                        <span x-show="isAdmin" class="ml-1 px-1.5 py-0.2 bg-emerald-500 text-white text-[10px] rounded-full">Admin</span>
+                    </button>
+                </nav>
+
+                <!-- Auth/Admin Status Action -->
+                <div class="flex items-center gap-2">
+                    <template x-if="!isAdmin">
+                        <button @click="showAuthModal = true" class="px-3 py-2 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition flex items-center gap-2">
+                            <i class="fa-solid fa-user-shield text-msu-yellow"></i>
+                            <span class="hidden sm:inline">Admin Login</span>
+                        </button>
+                    </template>
+                    <template x-if="isAdmin">
+                        <div class="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span class="text-xs text-slate-200 font-medium">ผู้ดูแลระบบ</span>
+                            <button @click="handleAdminLogout" class="ml-2 text-xs text-red-400 hover:text-red-300" title="ออกจากระบบ Admin">
+                                <i class="fa-solid fa-right-from-bracket"></i>
+                            </button>
+                        </div>
+                    </template>
+                    <button @click="logoutApp" class="p-2 text-slate-400 hover:text-red-400 rounded-xl" title="ล็อกเอาท์ออกจากระบบทั้งหมด">
+                        <i class="fa-solid fa-power-off text-base"></i>
+                    </button>
+                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden p-2 text-slate-300 hover:bg-slate-800 rounded-xl">
+                        <i class="fa-solid fa-bars text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Dropdown Nav -->
+            <div x-show="mobileMenuOpen" class="md:hidden bg-slate-800 border-t border-slate-700 px-4 py-3 space-y-2">
+                <button @click="currentTab = 'dashboard'; mobileMenuOpen = false" :class="currentTab === 'dashboard' ? 'bg-msu-500 text-white' : 'text-slate-300'" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie"></i> หน้าแรก
+                </button>
+                <button @click="currentTab = 'directory'; mobileMenuOpen = false" :class="currentTab === 'directory' ? 'bg-msu-500 text-white' : 'text-slate-300'" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                    <i class="fa-solid fa-address-book"></i> ทำเนียบรุ่นนิสิต (<span x-text="students.length"></span> คน)
+                </button>
+                <button @click="currentTab = 'advisors'; mobileMenuOpen = false" :class="currentTab === 'advisors' ? 'bg-msu-500 text-white' : 'text-slate-300'" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                    <i class="fa-solid fa-chalkboard-user"></i> อาจารย์ที่ปรึกษา (<span x-text="advisors.length"></span> ท่าน)
+                </button>
+                <button @click="handleSettingsTabClick(); mobileMenuOpen = false" :class="currentTab === 'settings' ? 'bg-msu-500 text-white' : 'text-slate-300'" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                    <i class="fa-solid fa-gear"></i> จัดการข้อมูล <span x-show="isAdmin" class="text-xs text-emerald-400">(Admin)</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+            <!-- TAB 1: DASHBOARD & ANALYTICS -->
+            <div x-show="currentTab === 'dashboard'" class="space-y-6">
+                <!-- Welcome Banner -->
+                <div class="bg-gradient-to-r from-msu-dark via-slate-800 to-msu-700 rounded-2xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div class="relative z-10 space-y-2">
+                        <span class="inline-block px-3 py-1 bg-msu-yellow/20 text-msu-yellow text-xs font-semibold rounded-full border border-msu-yellow/30">
+                            คณะศึกษาศาสตร์ มหาวิทยาลัยมหาสารคาม
+                        </span>
+                        <h2 class="text-2xl sm:text-3xl font-bold">ทำเนียบรุ่น กศ.ม. สาขาการบริหารและพัฒนาการศึกษา พ.39</h2>
+                        <p class="text-slate-300 text-sm max-w-2xl">
+                            ระบบรวบรวมข้อมูลเครือข่ายความสัมพันธ์ สถิตินิสิต อาจารย์ที่ปรึกษา และทำเนียบรุ่น เพื่อการติดต่อสื่อสารและการบริหารจัดการข้อมูลอย่างมีประสิทธิภาพ
+                        </p>
+                    </div>
+                    <div class="relative z-10 flex gap-4 shrink-0">
+                        <div class="bg-white/10 backdrop-blur-md px-5 py-4 rounded-xl border border-white/10 text-center">
+                            <div class="text-3xl font-bold text-msu-yellow" x-text="students.length"></div>
+                            <div class="text-xs text-slate-300 mt-1">นิสิตทั้งหมด</div>
+                        </div>
+                        <div class="bg-white/10 backdrop-blur-md px-5 py-4 rounded-xl border border-white/10 text-center">
+                            <div class="text-3xl font-bold text-msu-500" x-text="advisors.length"></div>
+                            <div class="text-xs text-slate-300 mt-1">อาจารย์ที่ปรึกษา</div>
+                        </div>
+                    </div>
+                    <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-msu-yellow/10 rounded-full blur-3xl pointer-events-none"></div>
+                </div>
+
+                <!-- Stat Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium uppercase">ห้อง 1</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1" x-text="countByRoom('ห้อง 1') + ' คน'"></h3>
+                            <p class="text-xs text-msu-600 mt-1" x-text="calculatePercentage(countByRoom('ห้อง 1')) + '% ของทั้งหมด'"></p>
+                        </div>
+                        <div class="w-12 h-12 bg-orange-100 text-msu-500 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium uppercase">ห้อง 2</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1" x-text="countByRoom('ห้อง 2') + ' คน'"></h3>
+                            <p class="text-xs text-msu-600 mt-1" x-text="calculatePercentage(countByRoom('ห้อง 2')) + '% ของทั้งหมด'"></p>
+                        </div>
+                        <div class="w-12 h-12 bg-amber-100 text-msu-yellow rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium uppercase">ห้อง 3</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1" x-text="countByRoom('ห้อง 3') + ' คน'"></h3>
+                            <p class="text-xs text-msu-600 mt-1" x-text="calculatePercentage(countByRoom('ห้อง 3')) + '% ของทั้งหมด'"></p>
+                        </div>
+                        <div class="w-12 h-12 bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-slate-500 font-medium uppercase">จังหวัดในเครือข่าย</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1" x-text="getUniqueProvinces().length + ' จังหวัด'"></h3>
+                            <p class="text-xs text-emerald-600 mt-1">กระจายตัวหลายพื้นที่</p>
+                        </div>
+                        <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Chart 1: Room breakdown -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-msu-500"></i> สัดส่วนนิสิตแยกตามห้องเรียน
+                        </h3>
+                        <div class="relative h-64 flex justify-center">
+                            <canvas id="roomChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Chart 2: Top Provinces -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-bar text-msu-yellow"></i> จังหวัดสังกัดยอดนิยม (Top จังหวัด)
+                        </h3>
+                        <div class="relative h-64 flex justify-center">
+                            <canvas id="provinceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: DIRECTORY (ทำเนียบรุ่นนิสิต) -->
+            <div x-show="currentTab === 'directory'" class="space-y-6">
+                <!-- Filters & Search Bar -->
+                <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div class="w-full md:w-96 relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-search"></i>
+                        </span>
+                        <input type="text" x-model="searchQuery" placeholder="ค้นหาด้วยชื่อ, รหัสนิสิต, ตำแหน่ง หรือจังหวัด..." 
+                            class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 focus:border-msu-500 outline-none text-sm">
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                        <!-- Room Filter -->
+                        <select x-model="selectedRoomFilter" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-msu-500 outline-none">
+                            <option value="">ทุกห้องเรียน (ทั้งหมด)</option>
+                            <option value="ห้อง 1">ห้อง 1</option>
+                            <option value="ห้อง 2">ห้อง 2</option>
+                            <option value="ห้อง 3">ห้อง 3</option>
+                        </select>
+
+                        <!-- Province Filter -->
+                        <select x-model="selectedProvinceFilter" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-msu-500 outline-none">
+                            <option value="">ทุกจังหวัด</option>
+                            <template x-for="prov in getUniqueProvinces()">
+                                <option :value="prov" x-text="prov"></option>
+                            </template>
+                        </select>
+
+                        <button @click="searchQuery = ''; selectedRoomFilter = ''; selectedProvinceFilter = ''" class="px-4 py-2.5 text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                            <i class="fa-solid fa-rotate-right mr-1"></i> รีเซ็ต
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Student Cards Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <template x-for="student in filteredStudents" :key="student.id">
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition flex flex-col justify-between">
+                            <div>
+                                <!-- Header Card with Larger Photo & Badge -->
+                                <div class="p-5 pb-4 border-b border-slate-100 flex items-start gap-4">
+                                    <div class="relative shrink-0 group cursor-pointer" @click="zoomImage(student.image || 'https://placehold.co/400x400/f1f5f9/cbd5e1?text=No+Photo', student.name)">
+                                        <img :src="student.image || 'https://placehold.co/300x300/f1f5f9/cbd5e1?text=No+Photo'" 
+                                             onerror="this.src='https://placehold.co/300x300/f1f5f9/cbd5e1?text=Error'"
+                                             class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-2 border-msu-yellow shadow-md group-hover:opacity-95 transition bg-slate-100">
+                                        <div class="absolute inset-0 bg-black/30 rounded-2xl opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-semibold gap-1">
+                                            <i class="fa-solid fa-magnifying-glass-plus"></i> ขยาย
+                                        </div>
+                                        <span class="absolute -bottom-2 -right-2 px-2 py-0.5 bg-msu-500 text-white text-xs font-bold rounded-lg shadow" x-text="student.room"></span>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-xs font-semibold px-2 py-0.5 bg-orange-50 text-msu-600 rounded-md font-mono" x-text="student.studentId"></span>
+                                        </div>
+                                        <h3 class="text-base font-bold text-slate-900 mt-1.5 truncate" x-text="student.name"></h3>
+                                        <div class="mt-1 text-msu-600 font-black text-xl tracking-wide truncate" x-text="student.nickname ? 'ชื่อเล่น: ' + student.nickname : 'ชื่อเล่น: -'"></div>
+                                        <p class="text-xs font-medium text-slate-600 truncate mt-1" x-text="student.position || 'ยังไม่ระบุตำแหน่ง'"></p>
+                                    </div>
+                                </div>
+
+                                <!-- Body Details -->
+                                <div class="p-5 space-y-2 text-xs text-slate-600">
+                                    <div class="flex items-center gap-2.5">
+                                        <i class="fa-solid fa-building text-msu-yellow w-4 text-center"></i>
+                                        <span class="truncate" x-text="student.workplace || 'ไม่ระบุสถานที่ทำงาน'"></span>
+                                    </div>
+                                    <div class="flex items-center gap-2.5">
+                                        <i class="fa-solid fa-location-dot text-red-500 w-4 text-center"></i>
+                                        <span class="truncate" x-text="student.province || 'มหาสารคาม'"></span>
+                                    </div>
+                                    <div class="flex items-center gap-2.5">
+                                        <i class="fa-solid fa-user-tie text-blue-500 w-4 text-center"></i>
+                                        <span class="truncate" x-text="'อ.ที่ปรึกษา: ' + (student.advisor || '-')"></span>
+                                    </div>
+                                    <div class="flex items-center gap-2.5">
+                                        <i class="fa-solid fa-book text-purple-500 w-4 text-center"></i>
+                                        <span class="truncate" x-text="'วิทยานิพนธ์: ' + (student.thesis || '-')"></span>
+                                    </div>
+                                    <div class="flex items-center gap-2.5">
+                                        <i class="fa-solid fa-phone text-emerald-600 w-4 text-center"></i>
+                                        <span class="font-medium" x-text="student.phone || 'ไม่ระบุเบอร์โทร'"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card Footer Action -->
+                            <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                                <span class="text-[11px] text-slate-400">กศ.ม. พ.39</span>
+                                <button @click="openStudentDetail(student)" class="px-3.5 py-1.5 bg-slate-200 hover:bg-msu-500 hover:text-white text-slate-700 text-xs font-medium rounded-lg transition">
+                                    <i class="fa-solid fa-eye mr-1"></i> ดูข้อมูลเต็ม
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Empty State -->
+                <div x-show="filteredStudents.length === 0" class="text-center py-16 bg-white rounded-2xl border border-slate-200">
+                    <div class="text-slate-300 text-5xl mb-3">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <p class="text-slate-600 font-medium">ไม่พบข้อมูลนิสิตที่ค้นหา</p>
+                    <p class="text-xs text-slate-400 mt-1">ลองเปลี่ยนเงื่อนไขคำค้นหาหรือตัวกรองห้องเรียน</p>
+                </div>
+            </div>
+
+            <!-- TAB 3: ADVISORS DIRECTORY (อาจารย์ที่ปรึกษาประจำห้อง 6 ท่าน / 2 ท่านต่อห้อง) -->
+            <div x-show="currentTab === 'advisors'" class="space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">ทำเนียบอาจารย์ที่ปรึกษาประจำห้อง (ห้องละ 2 ท่าน รวม 6 ท่าน)</h3>
+                        <p class="text-xs text-slate-500">รายนามอาจารย์ที่ปรึกษาประจำหลักสูตรและห้องเรียน</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <template x-for="advisor in advisors" :key="advisor.id">
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition flex flex-col justify-between">
+                            <div>
+                                <div class="p-5 pb-4 border-b border-slate-100 flex items-start gap-4">
+                                    <div class="relative shrink-0 group cursor-pointer" @click="zoomImage(advisor.image || 'https://placehold.co/400x400/f1f5f9/cbd5e1?text=Advisor', advisor.name)">
+                                        <img :src="advisor.image || 'https://placehold.co/300x300/f1f5f9/cbd5e1?text=Advisor'" 
+                                             onerror="this.src='https://placehold.co/300x300/f1f5f9/cbd5e1?text=Error'"
+                                             class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover border-2 border-msu-yellow shadow-md group-hover:opacity-95 transition bg-slate-100">
+                                        <div class="absolute inset-0 bg-black/30 rounded-2xl opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-semibold gap-1">
+                                            <i class="fa-solid fa-magnifying-glass-plus"></i> ขยาย
+                                        </div>
+                                        <span class="absolute -bottom-2 -right-2 px-2 py-0.5 bg-blue-600 text-white text-xs font-bold rounded-lg shadow" x-text="advisor.roomGroup"></span>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <span class="text-xs font-semibold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md" x-text="advisor.position"></span>
+                                        <h3 class="text-base font-bold text-slate-900 mt-1.5 truncate" x-text="advisor.name"></h3>
+                                        <p class="text-xs font-medium text-slate-500 mt-1" x-text="advisor.department || 'คณะศึกษาศาสตร์ มมส'"></p>
+                                    </div>
+                                </div>
+
+                                <div class="p-5 space-y-2 text-xs text-slate-600">
+                                    <div class="flex items-center gap-2.5">
+                                        <i class="fa-solid fa-envelope text-amber-500 w-4 text-center"></i>
+                                        <span class="truncate" x-text="advisor.email || 'ไม่ระบุอีเมล'"></span>
+                                    </div>
+                                    <div class="flex items-center gap-2.5">
+                                        <i class="fa-solid fa-phone text-emerald-600 w-4 text-center"></i>
+                                        <span class="font-medium" x-text="advisor.phone || 'ไม่ระบุเบอร์โทร'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="px-5 py-3 bg-slate-50 border-t border-slate-100 text-right">
+                                <span class="text-[11px] text-slate-400">อาจารย์ที่ปรึกษา กศ.ม. พ.39</span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- TAB 4: SETTINGS & CRUD MANAGEMENT (ADMIN ONLY) -->
+            <div x-show="currentTab === 'settings'" class="space-y-6">
+                <template x-if="!isAdmin">
+                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center max-w-xl mx-auto space-y-4 my-12">
+                        <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto text-2xl shadow-inner">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-900">ต้องเข้าสู่ระบบผู้ดูแลระบบ (Admin)</h3>
+                        <p class="text-sm text-slate-500">
+                            หน้านี้สำหรับจัดการข้อมูล กรุณาคลิกปุ่มด้านล่างเพื่อยืนยันรหัสผ่านผู้ดูแลระบบ (Med692026)
+                        </p>
+                        <button @click="showAuthModal = true" class="px-6 py-3 bg-gradient-to-r from-red-500 to-msu-500 hover:from-red-600 hover:to-orange-600 text-white font-semibold rounded-xl shadow transition">
+                            <i class="fa-solid fa-user-shield mr-2"></i> กรอกรหัสผ่าน Admin
+                        </button>
+                    </div>
+                </template>
+
+                <template x-if="isAdmin">
+                    <div class="space-y-8">
+                        <!-- Action Header Bar -->
+                        <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900">จัดการข้อมูลนิสิต (Admin Dashboard)</h3>
+                                <p class="text-xs text-slate-500">เพิ่ม, แก้ไข หรือลบข้อมูลสมาชิกในทำเนียบรุ่น</p>
+                            </div>
+                            <div class="flex items-center gap-3 w-full sm:w-auto">
+                                <button @click="resetToDefaultData" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition flex items-center gap-2">
+                                    <i class="fa-solid fa-rotate text-msu-500"></i> โหลดข้อมูลเริ่มต้น (75 คน)
+                                </button>
+                                <button @click="openAddModal" class="px-4 py-2.5 bg-gradient-to-r from-msu-yellow to-msu-500 hover:from-yellow-500 hover:to-orange-600 text-white text-sm font-semibold rounded-xl shadow transition flex items-center gap-2">
+                                    <i class="fa-solid fa-plus"></i> เพิ่มนิสิตใหม่
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Data Table View -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                                            <th class="py-3 px-4">รูปภาพ</th>
+                                            <th class="py-3 px-4">รหัสนิสิต (11 หลัก)</th>
+                                            <th class="py-3 px-4">ชื่อ - นามสกุล</th>
+                                            <th class="py-3 px-4">ห้อง</th>
+                                            <th class="py-3 px-4">ตำแหน่ง / สถานที่</th>
+                                            <th class="py-3 px-4">วิทยานิพนธ์ / อาจารย์</th>
+                                            <th class="py-3 px-4 text-center">จัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-sm text-slate-700">
+                                        <template x-for="student in students" :key="student.id">
+                                            <tr class="hover:bg-slate-50/80 transition">
+                                                <td class="py-3 px-4">
+                                                    <img :src="student.image || 'https://placehold.co/120x120/f1f5f9/cbd5e1?text=No+Photo'" 
+                                                         onerror="this.src='https://placehold.co/120x120/f1f5f9/cbd5e1?text=Error'"
+                                                         @click="zoomImage(student.image || 'https://placehold.co/300x300/f1f5f9/cbd5e1?text=No+Photo', student.name)"
+                                                         class="w-14 h-14 rounded-xl object-cover border border-slate-200 cursor-pointer hover:opacity-90 shadow-sm bg-slate-100" title="คลิกเพื่อขยายรูปภาพ">
+                                                </td>
+                                                <td class="py-3 px-4 font-semibold text-msu-600 text-xs font-mono" x-text="student.studentId"></td>
+                                                <td class="py-3 px-4">
+                                                    <div class="font-medium text-slate-900" x-text="student.name"></div>
+                                                    <div class="text-sm text-msu-600 font-black" x-text="student.nickname ? 'ชื่อเล่น: ' + student.nickname : ''"></div>
+                                                </td>
+                                                <td class="py-3 px-4">
+                                                    <span class="px-2 py-1 bg-orange-50 text-msu-700 rounded-lg text-xs font-semibold" x-text="student.room"></span>
+                                                </td>
+                                                <td class="py-3 px-4">
+                                                    <div class="text-xs font-medium text-slate-800" x-text="student.position || '-'"></div>
+                                                    <div class="text-[11px] text-slate-400 truncate max-w-xs" x-text="student.workplace || '-'"></div>
+                                                </td>
+                                                <td class="py-3 px-4 text-xs">
+                                                    <div class="text-slate-800 truncate max-w-xs" x-text="'อ.ที่ปรึกษา: ' + (student.advisor || '-')"></div>
+                                                    <div class="text-slate-500 truncate max-w-xs" x-text="'เรื่อง: ' + (student.thesis || '-')"></div>
+                                                </td>
+                                                <td class="py-3 px-4 text-center">
+                                                    <div class="flex items-center justify-center gap-1.5">
+                                                        <button @click="openEditModal(student)" class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg transition" title="แก้ไขข้อมูล">
+                                                            <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                                        </button>
+                                                        <button @click="deleteStudent(student.id)" class="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition" title="ลบข้อมูล">
+                                                            <i class="fa-solid fa-trash text-xs"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Manage Advisors Section -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="text-base font-bold text-slate-900">จัดการข้อมูลอาจารย์ที่ปรึกษา (6 ท่าน)</h4>
+                                    <p class="text-xs text-slate-500">แก้ไขข้อมูลอาจารย์ที่ปรึกษาประจำห้อง</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <template x-for="adv in advisors" :key="adv.id">
+                                    <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
+                                        <div class="flex items-center gap-3">
+                                            <img :src="adv.image || 'https://placehold.co/100x100/f1f5f9/cbd5e1?text=Adv'" class="w-12 h-12 rounded-xl object-cover border border-slate-300 bg-slate-100">
+                                            <div>
+                                                <span class="text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded" x-text="adv.roomGroup"></span>
+                                                <h5 class="text-xs font-bold text-slate-800 mt-1" x-text="adv.name"></h5>
+                                                <p class="text-[11px] text-slate-500" x-text="adv.phone || '-'"></p>
+                                            </div>
+                                        </div>
+                                        <button @click="openEditAdvisorModal(adv)" class="p-2 bg-white hover:bg-amber-50 text-amber-600 border border-slate-200 rounded-lg transition" title="แก้ไขอาจารย์">
+                                            <i class="fa-solid fa-pen text-xs"></i>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                    </div>
+                </template>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- MODAL: ADD / EDIT STUDENT -->
+    <div x-show="showModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
+        <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 sm:p-8 space-y-6 transform transition-all border border-slate-100" @click.outside="closeModal">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <h3 class="text-lg font-bold text-slate-900" x-text="isEditing ? 'แก้ไขข้อมูลนิสิต' : 'เพิ่มข้อมูลนิสิตใหม่'"></h3>
+                <button @click="closeModal" class="p-2 text-slate-400 hover:text-slate-600 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form @submit.prevent="saveStudent" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">รหัสนิสิต (11 หลัก เช่น 69010581001)</label>
+                    <input type="text" x-model="formData.studentId" required maxlength="11" placeholder="69010581001" 
+                        class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm font-mono">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">ชื่อ - นามสกุล</label>
+                        <input type="text" x-model="formData.name" required placeholder="ชื่อ นามสกุล" 
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">ชื่อเล่น</label>
+                        <input type="text" x-model="formData.nickname" placeholder="ชื่อเล่น" 
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">ห้องเรียน</label>
+                        <select x-model="formData.room" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                            <option value="ห้อง 1">ห้อง 1</option>
+                            <option value="ห้อง 2">ห้อง 2</option>
+                            <option value="ห้อง 3">ห้อง 3</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">จังหวัด</label>
+                        <input type="text" x-model="formData.province" placeholder="เช่น มหาสารคาม" 
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">ตำแหน่งงาน</label>
+                        <input type="text" x-model="formData.position" placeholder="เช่น ครูชำนาญการ" 
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">สถานที่ทำงานปัจจุบัน</label>
+                        <input type="text" x-model="formData.workplace" placeholder="เช่น โรงเรียน..." 
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">อาจารย์ที่ปรึกษาวิทยานิพนธ์</label>
+                        <input type="text" x-model="formData.advisor" placeholder="xxx" 
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">ชื่อเรื่องวิทยานิพนธ์</label>
+                        <input type="text" x-model="formData.thesis" placeholder="xxx" 
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">เบอร์โทรศัพท์</label>
+                        <input type="text" x-model="formData.phone" placeholder="เช่น 081-234-5678" 
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">รูปภาพ (ลิงก์ หรืออัปโหลดไฟล์)</label>
+                        <div class="flex gap-2">
+                            <input type="text" x-model="formData.image" placeholder="https://..." 
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                            <input type="file" @change="handleImageUpload" accept="image/*" class="hidden" id="imageUploadInput">
+                            <label for="imageUploadInput" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs rounded-xl cursor-pointer flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-upload"></i>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" @click="closeModal" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-gradient-to-r from-msu-yellow to-msu-500 hover:from-yellow-500 hover:to-orange-600 text-white text-sm font-semibold rounded-xl shadow transition">
+                        บันทึกข้อมูล
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: EDIT ADVISOR -->
+    <div x-show="showAdvisorModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6 transform transition-all border border-slate-100" @click.outside="showAdvisorModal = false">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                <h3 class="text-lg font-bold text-slate-900">แก้ไขข้อมูลอาจารย์ที่ปรึกษา</h3>
+                <button @click="showAdvisorModal = false" class="p-2 text-slate-400 hover:text-slate-600 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form @submit.prevent="saveAdvisor" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">ชื่อ - นามสกุล อาจารย์</label>
+                    <input type="text" x-model="advisorFormData.name" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">ตำแหน่งทางวิชาการ</label>
+                    <input type="text" x-model="advisorFormData.position" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">อีเมล</label>
+                        <input type="email" x-model="advisorFormData.email" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">เบอร์โทรศัพท์</label>
+                        <input type="text" x-model="advisorFormData.phone" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">รูปภาพ (ลิงก์ หรืออัปโหลดไฟล์)</label>
+                    <div class="flex gap-2">
+                        <input type="text" x-model="advisorFormData.image" placeholder="https://..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-msu-500 outline-none text-sm">
+                        <input type="file" @change="handleAdvisorImageUpload" accept="image/*" class="hidden" id="advisorImageUploadInput">
+                        <label for="advisorImageUploadInput" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs rounded-xl cursor-pointer flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-upload"></i>
+                        </label>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" @click="showAdvisorModal = false" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition">ยกเลิก</button>
+                    <button type="submit" class="px-5 py-2 bg-gradient-to-r from-msu-yellow to-msu-500 text-white text-sm font-semibold rounded-xl shadow transition">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: STUDENT DETAIL VIEW -->
+    <div x-show="showDetailModal" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" x-cloak>
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6 transform transition-all border border-slate-100 relative" @click.outside="showDetailModal = false">
+            <button @click="showDetailModal = false" class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-lg">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="text-center">
+                <div class="relative inline-block group cursor-pointer mb-3" @click="zoomImage(selectedStudent.image || 'https://placehold.co/400x400/f1f5f9/cbd5e1?text=No+Photo', selectedStudent.name)">
+                    <img :src="selectedStudent.image || 'https://placehold.co/300x300/f1f5f9/cbd5e1?text=No+Photo'" 
+                         onerror="this.src='https://placehold.co/300x300/f1f5f9/cbd5e1?text=Error'"
+                         class="w-36 h-36 sm:w-40 sm:h-40 rounded-2xl object-cover mx-auto border-4 border-msu-yellow shadow-lg group-hover:opacity-95 transition bg-slate-100">
+                    <div class="absolute inset-0 bg-black/30 rounded-2xl opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-sm font-semibold gap-1">
+                        <i class="fa-solid fa-magnifying-glass-plus"></i> คลิกขยายภาพ
+                    </div>
+                </div>
+                <div>
+                    <span class="px-2.5 py-1 bg-orange-50 text-msu-600 text-xs font-bold rounded-lg font-mono" x-text="selectedStudent.studentId"></span>
+                    <h3 class="text-xl font-bold text-slate-900 mt-2" x-text="selectedStudent.name"></h3>
+                    <div class="text-msu-600 font-black text-xl mt-1" x-text="selectedStudent.nickname ? 'ชื่อเล่น: ' + selectedStudent.nickname : 'ชื่อเล่น: -'"></div>
+                    <p class="text-xs font-semibold text-slate-500 mt-0.5" x-text="selectedStudent.room"></p>
+                </div>
+            </div>
+
+            <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm text-slate-700">
+                <div class="flex items-start justify-between">
+                    <span class="text-slate-400 text-xs">ตำแหน่ง:</span>
+                    <span class="font-medium text-right" x-text="selectedStudent.position || '-'"></span>
+                </div>
+                <div class="flex items-start justify-between">
+                    <span class="text-slate-400 text-xs">สถานที่ทำงาน:</span>
+                    <span class="font-medium text-right" x-text="selectedStudent.workplace || '-'"></span>
+                </div>
+                <div class="flex items-start justify-between">
+                    <span class="text-slate-400 text-xs">จังหวัด:</span>
+                    <span class="font-medium text-right" x-text="selectedStudent.province || '-'"></span>
+                </div>
+                <div class="flex items-start justify-between">
+                    <span class="text-slate-400 text-xs">อ.ที่ปรึกษาวิทยานิพนธ์:</span>
+                    <span class="font-medium text-right text-blue-600" x-text="selectedStudent.advisor || '-'"></span>
+                </div>
+                <div class="flex items-start justify-between">
+                    <span class="text-slate-400 text-xs">หัวข้อวิทยานิพนธ์:</span>
+                    <span class="font-medium text-right text-purple-600" x-text="selectedStudent.thesis || '-'"></span>
+                </div>
+                <div class="flex items-start justify-between">
+                    <span class="text-slate-400 text-xs">เบอร์โทรศัพท์:</span>
+                    <span class="font-medium text-right text-emerald-600" x-text="selectedStudent.phone || '-'"></span>
+                </div>
+            </div>
+
+            <button @click="showDetailModal = false" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm rounded-xl transition">
+                ปิดหน้าต่าง
+            </button>
+        </div>
+    </div>
+
+    <!-- LIGHTBOX MODAL: FULL SIZE IMAGE ZOOM -->
+    <div x-show="showZoomModal" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4" x-cloak @click="showZoomModal = false">
+        <div class="relative max-w-3xl w-full flex flex-col items-center" @click.stop>
+            <button @click="showZoomModal = false" class="absolute -top-12 right-0 text-white hover:text-msu-yellow text-2xl p-2">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <img :src="zoomImgSrc" class="max-h-[80vh] max-w-full rounded-2xl shadow-2xl object-contain border-2 border-slate-700 bg-slate-900">
+            <p class="text-white text-sm font-medium mt-4 bg-slate-800/80 px-4 py-1.5 rounded-full border border-slate-700" x-text="zoomImgTitle"></p>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APP LOGIC -->
+    <script>
+        function appData() {
+            return {
+                isLoggedIn: sessionStorage.getItem('msu_user_logged') === 'true',
+                loginPasswordInput: '',
+                loginError: '',
+
+                isAdmin: sessionStorage.getItem('msu_admin_auth') === 'true',
+                showAuthModal: false,
+                adminPasswordInput: '',
+                adminLoginError: '',
+
+                currentTab: 'dashboard',
+                mobileMenuOpen: false,
+                
+                students: [],
+                advisors: [],
+                searchQuery: '',
+                selectedRoomFilter: '',
+                selectedProvinceFilter: '',
+
+                showModal: false,
+                isEditing: false,
+                formData: { id: null, studentId: '', name: '', nickname: '', position: '', workplace: '', province: '', advisor: 'xxx', thesis: 'xxx', phone: '', room: 'ห้อง 1', image: '' },
+
+                showAdvisorModal: false,
+                advisorFormData: { id: null, name: '', position: '', email: '', phone: '', roomGroup: '', image: '' },
+
+                showDetailModal: false,
+                selectedStudent: {},
+
+                showZoomModal: false,
+                zoomImgSrc: '',
+                zoomImgTitle: '',
+
+                roomChartInstance: null,
+                provinceChartInstance: null,
+
+                initApp() {
+                    // Load or Initialize Students (Prioritizes localStorage, falls back to sessionStorage for Google Sites iframe safety)
+                    const savedStudents = localStorage.getItem('msu_students_p39_v4') || sessionStorage.getItem('msu_students_p39_v4');
+                    if (savedStudents) {
+                        try {
+                            this.students = JSON.parse(savedStudents);
+                        } catch (e) {
+                            this.loadDefaultStudents();
+                        }
+                    } else {
+                        this.loadDefaultStudents();
+                    }
+
+                    // Load or Initialize Advisors
+                    const savedAdvisors = localStorage.getItem('msu_advisors_p39_v3') || sessionStorage.getItem('msu_advisors_p39_v3');
+                    if (savedAdvisors) {
+                        try {
+                            this.advisors = JSON.parse(savedAdvisors);
+                        } catch (e) {
+                            this.loadDefaultAdvisors();
+                        }
+                    } else {
+                        this.loadDefaultAdvisors();
+                    }
+
+                    this.$watch('currentTab', (value) => {
+                        if (value === 'dashboard' && this.isLoggedIn) {
+                            setTimeout(() => this.renderCharts(), 50);
+                        }
+                    });
+
+                    if (this.isLoggedIn) {
+                        setTimeout(() => this.renderCharts(), 100);
+                    }
+                },
+
+                handleLogin() {
+                    if (this.loginPasswordInput === '998877') {
+                        this.isLoggedIn = true;
+                        sessionStorage.setItem('msu_user_logged', 'true');
+                        this.loginError = '';
+                        this.loginPasswordInput = '';
+                        setTimeout(() => this.renderCharts(), 100);
+                    } else {
+                        this.loginError = 'รหัสผ่านเข้าใช้งานระบบไม่ถูกต้อง';
+                    }
+                },
+
+                logoutApp() {
+                    this.isLoggedIn = false;
+                    this.isAdmin = false;
+                    sessionStorage.removeItem('msu_user_logged');
+                    sessionStorage.removeItem('msu_admin_auth');
+                    this.loginPasswordInput = '';
+                },
+
+                handleAdminLogin() {
+                    if (this.adminPasswordInput === 'Med692026') {
+                        this.isAdmin = true;
+                        sessionStorage.setItem('msu_admin_auth', 'true');
+                        this.adminLoginError = '';
+                        this.adminPasswordInput = '';
+                        this.showAuthModal = false;
+                        this.currentTab = 'settings';
+                    } else {
+                        this.adminLoginError = 'รหัสผ่าน Admin ไม่ถูกต้อง (ต้องใช้ Med692026)';
+                    }
+                },
+
+                handleAdminLogout() {
+                    this.isAdmin = false;
+                    sessionStorage.removeItem('msu_admin_auth');
+                    this.currentTab = 'dashboard';
+                },
+
+                handleSettingsTabClick() {
+                    if (this.isAdmin) {
+                        this.currentTab = 'settings';
+                    } else {
+                        this.showAuthModal = true;
+                    }
+                },
+
+                zoomImage(imgUrl, title) {
+                    this.zoomImgSrc = imgUrl;
+                    this.zoomImgTitle = title || 'รูปภาพ';
+                    this.showZoomModal = true;
+                },
+
+                loadDefaultStudents() {
+                    const rooms = ['ห้อง 1', 'ห้อง 2', 'ห้อง 3'];
+                    const positions = ['ครูชำนาญการ', 'ครูผู้ช่วย', 'รองผู้อำนวยการ', 'ผู้อำนวยการโรงเรียน', 'นักวิชาการศึกษา'];
+                    const provinces = ['มหาสารคาม', 'ร้อยเอ็ด', 'กาฬสินธุ์', 'ขอนแก่น', 'บุรีรัมย์', 'สุรินทร์'];
+
+                    let generated = [];
+                    // Generate 75 students sorted by 11-digit student ID starting with 69010581xxx
+                    for (let i = 1; i <= 75; i++) {
+                        let room = rooms[(i - 1) % 3];
+                        let studentId = '69010581' + String(i).padStart(3, '0'); // 11 digits format: 69010581xxx
+                        let province = provinces[i % provinces.length];
+                        let position = positions[i % positions.length];
+
+                        generated.push({
+                            id: 'stu_' + i,
+                            studentId: studentId,
+                            name: 'ชื่อxxx นามสกุลxxx (' + i + ')',
+                            nickname: 'xxx',
+                            position: position,
+                            workplace: 'โรงเรียนบ้านหนองไฮ',
+                            province: province,
+                            advisor: 'xxx',
+                            thesis: 'xxx',
+                            phone: '081-234-' + String(1000 + i).slice(-4),
+                            room: room,
+                            image: ''
+                        });
+                    }
+                    this.students = generated.sort((a, b) => a.studentId.localeCompare(b.studentId));
+                    this.saveToStorage();
+                },
+
+                loadDefaultAdvisors() {
+                    let advs = [
+                        { id: 'adv_1', name: 'รศ.ดร.อาจารย์ที่ปรึกษา ท่านที่ 1', position: 'อาจารย์ประจำหลักสูตร', email: 'advisor1@msu.ac.th', phone: '043-754-101', roomGroup: 'ห้อง 1', image: '' },
+                        { id: 'adv_2', name: 'ผศ.ดร.อาจารย์ที่ปรึกษา ท่านที่ 2', position: 'อาจารย์ประจำหลักสูตร', email: 'advisor2@msu.ac.th', phone: '043-754-102', roomGroup: 'ห้อง 1', image: '' },
+                        { id: 'adv_3', name: 'รศ.ดร.อาจารย์ที่ปรึกษา ท่านที่ 3', position: 'อาจารย์ประจำหลักสูตร', email: 'advisor3@msu.ac.th', phone: '043-754-103', roomGroup: 'ห้อง 2', image: '' },
+                        { id: 'adv_4', name: 'ผศ.ดร.อาจารย์ที่ปรึกษา ท่านที่ 4', position: 'อาจารย์ประจำหลักสูตร', email: 'advisor4@msu.ac.th', phone: '043-754-104', roomGroup: 'ห้อง 2', image: '' },
+                        { id: 'adv_5', name: 'รศ.ดร.อาจารย์ที่ปรึกษา ท่านที่ 5', position: 'อาจารย์ประจำหลักสูตร', email: 'advisor5@msu.ac.th', phone: '043-754-105', roomGroup: 'ห้อง 3', image: '' },
+                        { id: 'adv_6', name: 'ผศ.ดร.อาจารย์ที่ปรึกษา ท่านที่ 6', position: 'อาจารย์ประจำหลักสูตร', email: 'advisor6@msu.ac.th', phone: '043-754-106', roomGroup: 'ห้อง 3', image: '' }
+                    ];
+                    this.advisors = advs;
+                    localStorage.setItem('msu_advisors_p39_v3', JSON.stringify(this.advisors));
+                    sessionStorage.setItem('msu_advisors_p39_v3', JSON.stringify(this.advisors));
+                },
+
+                resetToDefaultData() {
+                    if (confirm('คุณต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้น (75 คน) ใช่หรือไม่?')) {
+                        this.loadDefaultStudents();
+                        this.loadDefaultAdvisors();
+                        this.renderCharts();
+                    }
+                },
+
+                saveToStorage() {
+                    const studentDataJson = JSON.stringify(this.students);
+                    try {
+                        localStorage.setItem('msu_students_p39_v4', studentDataJson);
+                    } catch (e) {
+                        console.warn('LocalStorage restricted, using sessionStorage fallback.');
+                    }
+                    sessionStorage.setItem('msu_students_p39_v4', studentDataJson);
+                },
+
+                countByRoom(roomName) {
+                    return this.students.filter(s => s.room === roomName).length;
+                },
+
+                calculatePercentage(count) {
+                    if (this.students.length === 0) return 0;
+                    return ((count / this.students.length) * 100).toFixed(1);
+                },
+
+                getUniqueProvinces() {
+                    return [...new Set(this.students.map(s => s.province))].filter(Boolean);
+                },
+
+                get filteredStudents() {
+                    return this.students.filter(s => {
+                        const matchQuery = this.searchQuery === '' || 
+                            s.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+                            s.studentId.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+                            (s.position && s.position.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                            (s.province && s.province.toLowerCase().includes(this.searchQuery.toLowerCase()));
+                        
+                        const matchRoom = this.selectedRoomFilter === '' || s.room === this.selectedRoomFilter;
+                        const matchProvince = this.selectedProvinceFilter === '' || s.province === this.selectedProvinceFilter;
+
+                        return matchQuery && matchRoom && matchProvince;
+                    }).sort((a, b) => a.studentId.localeCompare(b.studentId));
+                },
+
+                openAddModal() {
+                    if (!this.isAdmin) {
+                        this.showAuthModal = true;
+                        return;
+                    }
+                    this.isEditing = false;
+                    this.formData = { id: 'stu_' + Date.now(), studentId: '69010581', name: '', nickname: '', position: '', workplace: '', province: 'มหาสารคาม', advisor: 'xxx', thesis: 'xxx', phone: '', room: 'ห้อง 1', image: '' };
+                    this.showModal = true;
+                },
+
+                openEditModal(student) {
+                    if (!this.isAdmin) {
+                        this.showAuthModal = true;
+                        return;
+                    }
+                    this.isEditing = true;
+                    this.formData = { ...student };
+                    this.showModal = true;
+                },
+
+                closeModal() {
+                    this.showModal = false;
+                },
+
+                saveStudent() {
+                    if (this.isEditing) {
+                        const index = this.students.findIndex(s => s.id === this.formData.id);
+                        if (index !== -1) {
+                            this.students[index] = { ...this.formData };
+                        }
+                    } else {
+                        this.students.unshift({ ...this.formData });
+                    }
+                    this.students.sort((a, b) => a.studentId.localeCompare(b.studentId));
+                    this.saveToStorage();
+                    this.showModal = false;
+                    this.renderCharts();
+                },
+
+                deleteStudent(id) {
+                    if (!this.isAdmin) {
+                        this.showAuthModal = true;
+                        return;
+                    }
+                    if (confirm('คุณต้องการลบข้อมูลนิสิตรายนี้ออกจากระบบใช่หรือไม่?')) {
+                        this.students = this.students.filter(s => s.id !== id);
+                        this.saveToStorage();
+                        this.renderCharts();
+                    }
+                },
+
+                openEditAdvisorModal(advisor) {
+                    this.advisorFormData = { ...advisor };
+                    this.showAdvisorModal = true;
+                },
+
+                saveAdvisor() {
+                    const idx = this.advisors.findIndex(a => a.id === this.advisorFormData.id);
+                    if (idx !== -1) {
+                        this.advisors[idx] = { ...this.advisorFormData };
+                        const advisorDataJson = JSON.stringify(this.advisors);
+                        try {
+                            localStorage.setItem('msu_advisors_p39_v3', advisorDataJson);
+                        } catch (e) {}
+                        sessionStorage.setItem('msu_advisors_p39_v3', advisorDataJson);
+                    }
+                    this.showAdvisorModal = false;
+                },
+
+                openStudentDetail(student) {
+                    this.selectedStudent = student;
+                    this.showDetailModal = true;
+                },
+
+                handleImageUpload(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.formData.image = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                },
+
+                handleAdvisorImageUpload(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.advisorFormData.image = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                },
+
+                renderCharts() {
+                    const roomCtx = document.getElementById('roomChart');
+                    if (roomCtx) {
+                        if (this.roomChartInstance) this.roomChartInstance.destroy();
+                        
+                        const r1 = this.countByRoom('ห้อง 1');
+                        const r2 = this.countByRoom('ห้อง 2');
+                        const r3 = this.countByRoom('ห้อง 3');
+
+                        this.roomChartInstance = new Chart(roomCtx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['ห้อง 1', 'ห้อง 2', 'ห้อง 3'],
+                                datasets: [{
+                                    data: [r1, r2, r3],
+                                    backgroundColor: ['#f97316', '#eab308', '#64748b'],
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { font: { family: 'Prompt', size: 12 } } }
+                                }
+                            }
+                        });
+                    }
+
+                    const provCtx = document.getElementById('provinceChart');
+                    if (provCtx) {
+                        if (this.provinceChartInstance) this.provinceChartInstance.destroy();
+
+                        const provCounts = {};
+                        this.students.forEach(s => {
+                            let p = s.province || 'ไม่ระบุ';
+                            provCounts[p] = (provCounts[p] || 0) + 1;
+                        });
+
+                        const sortedProv = Object.entries(provCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+
+                        this.provinceChartInstance = new Chart(provCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: sortedProv.map(item => item[0]),
+                                datasets: [{
+                                    label: 'จำนวนนิสิต (คน)',
+                                    data: sortedProv.map(item => item[1]),
+                                    backgroundColor: '#f97316',
+                                    borderRadius: 8
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Prompt' } } },
+                                    x: { ticks: { font: { family: 'Prompt' } } }
+                                },
+                                plugins: {
+                                    legend: { display: false }
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+```
+eof
+
+### คำแนะนำเพิ่มเติมสำหรับการนำไปใช้งานบน Google Sites:
+เนื่องจาก Google Sites จะแสดงผลหน้าเว็บผ่าน **Iframe (Cross-Origin Sandbox)** ซึ่งบางครั้งบล็อกการเข้าถึง `localStorage` โดยตรง ทำให้อายุของข้อมูลถูกรีเซ็ตเมื่อเปลี่ยนหน้าหรือปิดแท็บ ทางระบบจึงได้ปรับปรุงให้ใช้ **Dual Storage (LocalStorage + SessionStorage Fallback)** ร่วมกัน 
+
+**หากท่านต้องการฝังโค้ดใน Google Sites อย่างถาวร แนะนำ 2 วิธีหลักดังนี้:**
+1. **ใช้ฟีเจอร์ "ฝังโค้ด (Embed code)"** ของ Google Sites แล้ววางโค้ด HTML ทั้งหมดลงไปโดยตรง
+2. **ทางเลือกที่ดีที่สุดสำหรับการแชร์ระยะยาว:** นำไฟล์ HTML นี้ไปฝากไฟล์ไว้ที่โฮสติ้งฟรีเช่น **GitHub Pages, Netlify, หรือ Vercel** แล้วนำลิงก์ (URL) มาใส่ใน Google Sites ผ่านเมนู **"ฝังด้วย URL"** วิธีนี้จะทำให้การบันทึกข้อมูลผ่าน `localStorage` ทำงานได้เต็มประสิทธิภาพ 100% โดยไม่มีข้อจำกัดเรื่อง Security Sandbox ของ Iframe ครับ
